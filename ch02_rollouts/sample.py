@@ -1,10 +1,17 @@
 """Rollout generation for RL post-training."""
 import torch
+
+# Fix: PyTorch 2.10+cu128 ships a cublas whose strided-batched GEMM
+# (cublasSgemmStridedBatched / cublasGemmEx) is broken under CUDA 12.9
+# drivers.  Switching to the cublasLt backend avoids the
+# CUBLAS_STATUS_INVALID_VALUE errors for fp16/bf16/fp32 batched matmuls.
+torch.backends.cuda.preferred_blas_library("cublaslt")
+
 from peft import LoraConfig, get_peft_model
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 
-def load_model_qlora(model_name: str = "Qwen/Qwen3-8B-Instruct"):
+def load_model_qlora(model_name: str = "Qwen/Qwen3-8B"):
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_quant_type="nf4",
